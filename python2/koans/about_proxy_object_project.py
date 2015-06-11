@@ -13,21 +13,43 @@
 # missing handler and any other supporting methods.  The specification
 # of the Proxy class is given in the AboutProxyObjectProject koan.
 
-# Note: This is a bit trickier than its Ruby Koans counterpart, but you
+# Note: This is a bit trickier that it's Ruby Koans counterpart, but you
 # can do it!
 
 from runner.koan import *
 
-
 class Proxy(object):
     def __init__(self, target_object):
-        # WRITE CODE HERE
+        self._messages = []
 
         #initialize '_obj' attribute last. Trust me on this!
         self._obj = target_object
 
-    # WRITE CODE HERE
+    def __getattr__(self, attr_name):
+        self._messages.append(attr_name)
+        return self._obj.__getattribute__(attr_name)
 
+    def __setattr__(self, attr_name, value):
+        names = ["_obj", "_messages", "messages", "was_called", "number_of_times_called"]
+        if attr_name in names:
+            return object.__setattr__(self, attr_name, value)
+        else:
+            self._messages.append(attr_name + "=")
+            self._obj.__setattr__(attr_name, value)
+
+    def messages(self):
+        return self._messages
+
+    def was_called(self, m):
+        return m in self._messages
+
+    def number_of_times_called(self, m):
+        count = 0
+        for message in self._messages:
+            if message == m:
+                count += 1
+
+        return count
 
 # The proxy object should pass the following Koan:
 #
@@ -53,7 +75,7 @@ class AboutProxyObjectProject(Koan):
         tv.power()
         tv.channel = 10
 
-        self.assertEqual(['power', 'channel'], tv.messages())
+        self.assertEqual(['power', 'channel='], tv.messages())
 
     def test_proxy_handles_invalid_messages(self):
         tv = Proxy(Television())
@@ -65,6 +87,7 @@ class AboutProxyObjectProject(Koan):
             pass
 
         self.assertEqual(AttributeError, type(ex))
+
 
     def test_proxy_reports_methods_have_been_called(self):
         tv = Proxy(Television())
@@ -83,7 +106,7 @@ class AboutProxyObjectProject(Koan):
         tv.power()
 
         self.assertEqual(2, tv.number_of_times_called('power'))
-        self.assertEqual(1, tv.number_of_times_called('channel'))
+        self.assertEqual(1, tv.number_of_times_called('channel='))
         self.assertEqual(0, tv.number_of_times_called('is_on'))
 
     def test_proxy_can_record_more_than_just_tv_objects(self):
@@ -97,7 +120,6 @@ class AboutProxyObjectProject(Koan):
 
         self.assertEqual(["Py", "Ohio", "2010"], result)
         self.assertEqual(['upper', 'split'], proxy.messages())
-
 
 # ====================================================================
 # The following code is to support the testing of the Proxy class.  No
@@ -125,7 +147,6 @@ class Television(object):
 
     def is_on(self):
         return self._power == 'on'
-
 
 # Tests for the Television class.  All of theses tests should pass.
 class TelevisionTest(Koan):
